@@ -1,0 +1,232 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Network Layer in 16 Reels</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=Poppins:wght@400;600;700&display=swap" rel="stylesheet">
+<style>
+  :root { --yel:#ffd640; --coral:#ee6055; --teal:#209c96; --ink:#1c2030; }
+  * { box-sizing:border-box; margin:0; padding:0; -webkit-tap-highlight-color:transparent; }
+  html,body { height:100%; background:#000; color:#fff; font-family:Poppins,system-ui,sans-serif; overflow:hidden; }
+  #feed { height:100%; overflow-y:scroll; scroll-snap-type:y mandatory; scrollbar-width:none; overscroll-behavior:contain; }
+  #feed::-webkit-scrollbar { display:none; }
+  .slide { position:relative; height:100%; scroll-snap-align:start; scroll-snap-stop:always; display:flex; justify-content:center; align-items:center; background:#000; }
+  .frame { position:relative; height:100%; aspect-ratio:9/16; max-width:100%; background:#0a1230; overflow:hidden; }
+  video { width:100%; height:100%; object-fit:cover; display:block; }
+  .tap { position:absolute; inset:0; }
+  .pauseIcon { position:absolute; left:50%; top:50%; width:96px; height:96px; margin:-48px 0 0 -48px; border-radius:50%; background:rgba(0,0,0,.45); display:none; align-items:center; justify-content:center; pointer-events:none; }
+  .paused .pauseIcon { display:flex; }
+  .heartPop { position:absolute; pointer-events:none; width:120px; height:120px; margin:-60px 0 0 -60px; animation:pop .8s ease-out forwards; }
+  @keyframes pop { 0%{transform:scale(.3);opacity:0} 25%{transform:scale(1.15);opacity:1} 70%{transform:scale(1);opacity:1} 100%{transform:scale(1) translateY(-60px);opacity:0} }
+  .rail { position:absolute; right:10px; bottom:130px; display:flex; flex-direction:column; gap:18px; align-items:center; }
+  .rail button { background:none; border:0; color:#fff; font:600 12px Poppins,sans-serif; display:flex; flex-direction:column; align-items:center; gap:4px; cursor:pointer; text-shadow:0 1px 3px rgba(0,0,0,.6); }
+  .rail .ic { width:50px; height:50px; border-radius:50%; background:rgba(0,0,0,.35); display:flex; align-items:center; justify-content:center; backdrop-filter:blur(4px); }
+  .rail button.on .ic svg { fill:var(--coral); stroke:var(--coral); }
+  .info { position:absolute; left:0; right:76px; bottom:0; padding:16px 14px 26px; background:linear-gradient(transparent, rgba(0,0,0,.75)); pointer-events:none; }
+  .info .tag { display:inline-block; background:var(--yel); color:var(--ink); font-weight:700; font-size:12px; padding:3px 10px; border-radius:20px; margin-bottom:6px; }
+  .info h2 { font-size:17px; font-weight:700; line-height:1.25; }
+  .info p { font-size:13px; opacity:.9; margin-top:4px; line-height:1.35; }
+  .info .seen { color:#7be3a7; font-size:12px; font-weight:600; margin-left:6px; }
+  .bar { position:absolute; left:0; right:0; bottom:0; height:14px; cursor:pointer; display:flex; align-items:flex-end; }
+  .bar i { display:block; height:3px; width:0; background:#fff; }
+  .top { position:fixed; top:0; left:0; right:0; z-index:5; display:flex; justify-content:center; pointer-events:none; }
+  .topIn { width:100%; max-width:calc(100vh * 9 / 16); height:7.9vh; min-height:46px; display:flex; justify-content:space-between; align-items:center; padding:0 12px; background:#14213d; pointer-events:auto; }
+  .brand { font-weight:700; font-size:15px; }
+  .brand small { display:block; font-weight:400; font-size:11px; opacity:.8; }
+  .pillbtn { background:rgba(255,255,255,.18); border:0; color:#fff; font:600 12px Poppins,sans-serif; padding:7px 12px; border-radius:20px; cursor:pointer; margin-left:6px; backdrop-filter:blur(4px); }
+  .pillbtn.on { background:var(--yel); color:var(--ink); }
+  #start { position:fixed; inset:0; z-index:20; display:flex; flex-direction:column; align-items:center; justify-content:center; gap:18px; text-align:center; padding:24px;
+           background:radial-gradient(circle at 50% 30%, #2a2f6e, #0a1230 70%); }
+  #start img { width:180px; border-radius:18px; box-shadow:0 10px 40px rgba(0,0,0,.5); }
+  #start h1 { font-size:30px; line-height:1.1; } #start h1 span { color:var(--yel); }
+  #start p { opacity:.85; font-size:14px; max-width:320px; }
+  #start button { background:var(--yel); color:var(--ink); border:0; font:700 18px Poppins,sans-serif; padding:14px 34px; border-radius:40px; cursor:pointer; }
+  #list { position:fixed; inset:0; z-index:15; background:rgba(8,12,30,.96); display:none; overflow-y:auto; padding:70px 16px 30px; }
+  #list.open { display:block; }
+  #list .wrap { max-width:460px; margin:0 auto; }
+  #list h3 { font-size:14px; opacity:.7; margin:6px 0 10px; font-weight:600; }
+  #list .item { display:flex; align-items:center; gap:12px; padding:12px; border-radius:16px; background:rgba(255,255,255,.07); margin-bottom:10px; cursor:pointer; }
+  #list .num { width:38px; height:38px; flex:none; border-radius:50%; background:var(--teal); display:flex; align-items:center; justify-content:center; font-weight:700; }
+  #list .item.done .num { background:#3cbe6e; }
+  #list .item b { display:block; font-size:15px; } #list .item span { font-size:12px; opacity:.75; }
+  #list .close { position:fixed; top:14px; right:14px; }
+  .hint { position:absolute; left:50%; top:13vh; transform:translateX(-50%); font-size:13px; font-weight:600; background:rgba(0,0,0,.45); padding:8px 14px; border-radius:20px; pointer-events:none; animation:bob 1.4s ease-in-out infinite; }
+  @keyframes bob { 50% { transform:translate(-50%,-8px); } }
+  /* wide screens: buttons and caption sit beside the video instead of on top of it */
+  @media (min-aspect-ratio: 3/4) {
+    .frame { overflow:visible; }
+    .rail { right:auto; left:calc(100% + 14px); bottom:30%; }
+    .info { left:auto; right:calc(100% + 22px); width:270px; bottom:30%; background:none; text-align:right; padding:0; }
+    .bar { z-index:2; }
+  }
+</style>
+</head>
+<body>
+
+<div id="start">
+  <img src="videos/poster.jpg" alt="">
+  <h1>Network Layer in <span>16 Reels</span></h1>
+  <p>Short cartoon lessons on BGP, NAT, routing, SDN, mobility and Wi-Fi. Swipe up for the next part.</p>
+  <button id="go">Start watching ▶</button>
+  <p style="font-size:12px;opacity:.6">Sound on 🔊 · 8 episodes · 16 videos</p>
+</div>
+
+<div class="top"><div class="topIn">
+  <div class="brand">Network Layer Reels</div>
+  <div>
+    <button class="pillbtn" id="auto" title="Play the next video automatically">Auto ↓</button>
+    <button class="pillbtn" id="menu">Episodes</button>
+  </div>
+</div></div>
+
+<div id="feed"></div>
+
+<div id="list"><button class="pillbtn close" id="closeList">✕ Close</button><div class="wrap" id="listWrap"></div></div>
+
+<script src="videos/videos.js"></script>
+<script>
+// The video list comes from videos/videos.js
+const VIDEOS = window.VIDEOS || [];
+const EP_TITLES = window.EP_TITLES || {};
+
+const store = {
+  get(k, d) { try { return JSON.parse(localStorage.getItem("nlr_" + k)) ?? d; } catch { return d; } },
+  set(k, v) { try { localStorage.setItem("nlr_" + k, JSON.stringify(v)); } catch {} }
+};
+let liked = new Set(store.get("liked", [])), seen = new Set(store.get("seen", []));
+let autoNext = store.get("auto", true), started = false, current = 0;
+const SPEEDS = [1, 0.75, 0.5];
+
+const icons = {
+  heart: '<svg width="28" height="28" viewBox="0 0 24 24" fill="#fff" stroke="#fff" stroke-width="1"><path d="M12 21s-7.5-4.6-10-9.3C.3 8.4 2.2 4.5 6 4.5c2.1 0 3.4 1.2 4 2.2.6-1 1.9-2.2 4-2.2 3.8 0 5.7 3.9 4 7.2C19.5 16.4 12 21 12 21z"/></svg>',
+  replay: '<svg width="26" height="26" viewBox="0 0 24 24" fill="none" stroke="#fff" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round"><path d="M3 12a9 9 0 1 0 3-6.7"/><path d="M3 4v5h5"/></svg>',
+  play: '<svg width="44" height="44" viewBox="0 0 24 24" fill="#fff"><path d="M8 5v14l11-7z"/></svg>',
+  slow: '<svg width="26" height="26" viewBox="0 0 24 24" fill="none" stroke="#fff" stroke-width="2.4" stroke-linecap="round"><circle cx="12" cy="13" r="8"/><path d="M12 13l3-3M9 2h6"/></svg>'
+};
+
+const feed = document.getElementById("feed");
+const slides = VIDEOS.map((v, i) => {
+  const id = `${v.ep}-${v.part}`;
+  const s = document.createElement("section");
+  s.className = "slide"; s.dataset.i = i;
+  s.innerHTML = `
+    <div class="frame">
+      <video playsinline preload="${i < 2 ? "auto" : "none"}" src="${v.file}"></video>
+      <div class="tap"></div>
+      <div class="pauseIcon">${icons.play}</div>
+      <div class="rail">
+        <button class="like ${liked.has(id) ? "on" : ""}"><span class="ic">${icons.heart}</span><span>Like</span></button>
+        <button class="replay"><span class="ic">${icons.replay}</span><span>Again</span></button>
+        <button class="speed"><span class="ic">${icons.slow}</span><span class="sp">1×</span></button>
+      </div>
+      <div class="info">
+        <span class="tag">Episode ${v.ep} · Part ${v.part}/${v.of}</span>
+        <h2>${v.n}. ${v.title}<span class="seen">${seen.has(id) ? "✓ seen" : ""}</span></h2>
+        <p>${v.text}</p>
+      </div>
+      ${i === 0 ? '<div class="hint">Swipe up ↑</div>' : ""}
+      <div class="bar"><i></i></div>
+    </div>`;
+  feed.appendChild(s);
+  const vid = s.querySelector("video"), frame = s.querySelector(".frame"), barI = s.querySelector(".bar i");
+  let sp = 0, lastTap = 0;
+
+  vid.addEventListener("timeupdate", () => { barI.style.width = (vid.currentTime / (vid.duration || 1) * 100) + "%"; });
+  vid.addEventListener("ended", () => {
+    markSeen(i);
+    if (autoNext && i < VIDEOS.length - 1) goTo(i + 1); else { vid.currentTime = 0; vid.play().catch(() => {}); }
+  });
+  s.querySelector(".tap").addEventListener("click", e => {
+    const now = Date.now();
+    if (now - lastTap < 300) { like(true); burst(e, frame); lastTap = 0; return; }
+    lastTap = now;
+    setTimeout(() => { if (lastTap === now) toggle(); }, 300);
+  });
+  function toggle() { if (vid.paused) { vid.play().catch(() => {}); frame.classList.remove("paused"); } else { vid.pause(); frame.classList.add("paused"); } }
+  function like(force) {
+    const btn = s.querySelector(".like");
+    if (force === true) liked.add(id); else liked.has(id) ? liked.delete(id) : liked.add(id);
+    btn.classList.toggle("on", liked.has(id)); store.set("liked", [...liked]);
+  }
+  s.querySelector(".like").addEventListener("click", () => like());
+  s.querySelector(".replay").addEventListener("click", () => { vid.currentTime = 0; vid.play().catch(() => {}); frame.classList.remove("paused"); });
+  s.querySelector(".speed").addEventListener("click", () => {
+    sp = (sp + 1) % SPEEDS.length; vid.playbackRate = SPEEDS[sp];
+    s.querySelector(".sp").textContent = SPEEDS[sp] + "×";
+  });
+  s.querySelector(".bar").addEventListener("click", e => {
+    const r = e.currentTarget.getBoundingClientRect();
+    if (vid.duration) vid.currentTime = (e.clientX - r.left) / r.width * vid.duration;
+  });
+  return { s, vid, frame, id };
+});
+
+function burst(e, frame) {
+  const r = frame.getBoundingClientRect(), h = document.createElement("div");
+  h.className = "heartPop"; h.innerHTML = icons.heart.replace(/width="28" height="28"/, 'width="120" height="120"').replace(/#fff/g, "#ee6055");
+  h.style.left = (e.clientX - r.left) + "px"; h.style.top = (e.clientY - r.top) + "px";
+  frame.appendChild(h); setTimeout(() => h.remove(), 800);
+}
+function markSeen(i) {
+  const o = slides[i]; if (seen.has(o.id)) return;
+  seen.add(o.id); store.set("seen", [...seen]);
+  o.s.querySelector(".seen").textContent = "✓ seen"; updateCount();
+}
+function updateCount() { document.getElementById("count").textContent = `${seen.size} / ${VIDEOS.length} videos seen`; }
+function goTo(i) { slides[i].s.scrollIntoView({ behavior: "smooth" }); }
+
+function activate(i) {
+  current = i;
+  slides.forEach((o, j) => {
+    if (j === i) { if (started) { o.vid.currentTime = 0; o.vid.play().catch(() => o.frame.classList.add("paused")); o.frame.classList.remove("paused"); } }
+    else { o.vid.pause(); }
+    if (Math.abs(j - i) === 1) o.vid.preload = "auto";
+  });
+}
+const io = new IntersectionObserver(es => es.forEach(e => {
+  if (e.isIntersecting && e.intersectionRatio > 0.6) activate(+e.target.dataset.i);
+}), { root: feed, threshold: [0.6] });
+slides.forEach(o => io.observe(o.s));
+
+document.getElementById("go").addEventListener("click", () => {
+  started = true; document.getElementById("start").style.display = "none";
+  // unlock sound on every video during this tap (needed on iPhone)
+  slides.forEach((o, j) => { if (j !== current) o.vid.play().then(() => { if (j !== current) o.vid.pause(); }).catch(() => {}); });
+  activate(current);
+});
+const autoBtn = document.getElementById("auto");
+function drawAuto() { autoBtn.classList.toggle("on", autoNext); }
+autoBtn.addEventListener("click", () => { autoNext = !autoNext; store.set("auto", autoNext); drawAuto(); });
+
+// Episode list
+const list = document.getElementById("list"), wrap = document.getElementById("listWrap");
+function drawList() {
+  wrap.innerHTML = "";
+  [...new Set(VIDEOS.map(v => v.ep))].forEach(ep => {
+    const h = document.createElement("h3"); h.textContent = EP_TITLES[ep] || "Episode " + ep; wrap.appendChild(h);
+    VIDEOS.forEach((v, i) => {
+      if (v.ep !== ep) return;
+      const d = document.createElement("div"); const done = seen.has(`${v.ep}-${v.part}`);
+      d.className = "item" + (done ? " done" : "");
+      d.innerHTML = `<div class="num">${done ? "✓" : v.part}</div><div><b>${v.n}. ${v.title}</b><span>${v.text}</span></div>`;
+      d.onclick = () => { list.classList.remove("open"); slides[i].s.scrollIntoView(); if (!started) document.getElementById("go").click(); };
+      wrap.appendChild(d);
+    });
+  });
+}
+document.getElementById("menu").onclick = () => { drawList(); list.classList.add("open"); };
+document.getElementById("closeList").onclick = () => list.classList.remove("open");
+
+// Keyboard: ↑ ↓ to scroll, space to pause
+document.addEventListener("keydown", e => {
+  if (!started) return;
+  if (e.key === "ArrowDown" && current < VIDEOS.length - 1) { e.preventDefault(); goTo(current + 1); }
+  if (e.key === "ArrowUp" && current > 0) { e.preventDefault(); goTo(current - 1); }
+  if (e.key === " ") { e.preventDefault(); slides[current].s.querySelector(".tap").click(); }
+});
+drawAuto(); updateCount();
+</script>
+</body>
+</html>
